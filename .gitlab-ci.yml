@@ -1,0 +1,104 @@
+stages:
+  - build_artifacts
+  - build_docker
+  - deploy
+
+## ------- Build frontend ----------------------------
+
+# Сборка front артифактов, только для ветки develop и веток feature/*
+Build:artifacts_front_develop:
+  image: node:buster
+  stage: build_artifacts
+  script:
+    - npm install
+    - ./node_modules/.bin/gatsby build --prefix-paths
+  variables:
+    APP_BUILD_ID: $CI_PIPELINE_IID
+  artifacts:
+    paths:
+      - public
+    expire_in: 1 hrs
+  only:
+    - develop
+    - dev
+    - /^feature\/.*$/
+
+# Сборка front артифактов, только для ветки main
+Build:artifacts_front_production:
+  image: node:buster
+  stage: build_artifacts
+  script:
+    - npm install
+    - ./node_modules/.bin/gatsby build --prefix-paths
+  variables:
+    APP_BUILD_ID: $CI_PIPELINE_IID
+  artifacts:
+    paths:
+      - public
+    expire_in: 1 hrs
+  only:
+    - main
+
+## ------- Build docker image ----------------------------
+
+# Собираем docker image для ветки develop и веток feature/*
+Build:docker_develop:
+  stage: build_docker
+  script:
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+    - docker build -t $CI_REGISTRY_IMAGE:dev-$CI_COMMIT_SHORT_SHA -t $CI_REGISTRY_IMAGE:dev-latest .
+    - docker push $CI_REGISTRY_IMAGE:dev-latest
+    - docker push $CI_REGISTRY_IMAGE:dev-$CI_COMMIT_SHORT_SHA
+  variables:
+    APP_BUILD_ID: $CI_PIPELINE_IID
+  only:
+    - develop
+    - dev
+    - /^feature\/.*$/
+
+# Сбока docker image только для ветки master
+Build:docker_production:
+  stage: build_docker
+  script:
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+    - docker build -t $CI_REGISTRY_IMAGE:prod-$CI_COMMIT_SHORT_SHA -t $CI_REGISTRY_IMAGE:prod-latest .
+    - docker push $CI_REGISTRY_IMAGE:prod-latest
+    - docker push $CI_REGISTRY_IMAGE:prod-$CI_COMMIT_SHORT_SHA
+  variables:
+    APP_BUILD_ID: $CI_PIPELINE_IID
+  only:
+    - main
+
+## ------- Deploy ----------------------------
+
+# Deployment только из ветки develop, тегов и веток feature/*
+Deploy:develop:
+  stage: deploy
+  allow_failure: false
+  image: registry.theforestvalley.com/base/gitlab-runner:latest
+  script:
+    - /runner/landing_deploy.sh vars.dev.yaml
+  variables:
+    APP_BUILD_ID: $CI_PIPELINE_IID
+  dependencies: []
+  when: manual
+  only:
+    - develop
+    - dev
+    - /^feature\/.*$/
+    - tags
+
+# Deployment только из ветки main или тегов
+Deploy:production:
+  stage: deploy
+  allow_failure: false
+  image: registry.theforestvalley.com/base/gitlab-runner:latest
+  script:
+    - /runner/landing_deploy.sh vars.prod.yaml
+  variables:
+    APP_BUILD_ID: $CI_PIPELINE_IID
+  dependencies: []
+  when: manual
+  only:
+    - main
+    - tags

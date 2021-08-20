@@ -1,0 +1,10 @@
+.gitignore
+.DS_Store
+.vscode
+.idea
+*.dump
+/.cache
+.git
+README.md
+Dockerfile
+.dockerignore

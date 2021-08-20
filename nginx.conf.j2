@@ -1,0 +1,21 @@
+## custom conf
+
+server {
+        listen         80 ;
+        server_name    {{ item.server_name }};
+        return         301 https://{{ item.server_name }}$request_uri;
+}
+
+server {
+        listen 443 ssl;
+        server_name {{ item.server_name }};
+        root    {{ item.root }};
+        index   index.php index.html index.htm;
+
+        ssl on;
+        ssl_certificate      /etc/letsencrypt/live/{{ item.server_name }}/fullchain.pem;
+        ssl_certificate_key  /etc/letsencrypt/live/{{ item.server_name }}/privkey.pem;
+        include  /etc/letsencrypt/options-ssl-nginx.conf;
+        add_header Strict-Transport-Security "max-age=31536000;";
+        add_header Content-Security-Policy-Report-Only "default-src https:; script-src https: 'unsafe-eval' 'unsafe-inline'; style-src https: 'unsafe-inline'; img-src https: data:; font-src https: data:; report-uri /csp-report";
+}

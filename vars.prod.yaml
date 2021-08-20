@@ -1,0 +1,6 @@
+---
+landing:
+  - name: "robotics.fv.dev"
+    mysql: false
+    image: "{{ lookup('env','CI_REGISTRY_IMAGE')}}:prod-{{lookup('env','CI_COMMIT_SHORT_SHA')}}"
+    redis: false
